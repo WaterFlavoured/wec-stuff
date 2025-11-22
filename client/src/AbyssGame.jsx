@@ -74,6 +74,7 @@ export default function AbyssGame() {
   });
 
   // --- 1. PRELOAD IMAGES ---
+  // useEffect is used for side effects like loading images
   useEffect(() => {
     const loadImage = (src) => {
       return new Promise((resolve, reject) => {
@@ -84,7 +85,7 @@ export default function AbyssGame() {
       });
     };
 
-    Promise.all([
+    Promise.all([ // Promise.all waits for all images to load
       loadImage(hazardIcon),
       loadImage(poiIcon),
       loadImage(lifeIcon),
@@ -98,6 +99,7 @@ export default function AbyssGame() {
   }, []);
 
   // --- 2. INITIALIZATION ---
+  // useEffec to load server data or generate fallback
   useEffect(() => {
     const initGridData = async () => {
       try {
@@ -123,10 +125,11 @@ export default function AbyssGame() {
         for (let r = 0; r < GRID_SIZE; r++) {
           grid[r] = [];
           for (let c = 0; c < GRID_SIZE; c++) {
+            // Random depth and pressure values
             grid[r][c] = {
               row: r, col: c,
-              depth: rand(4000, 6000),
-              pressure: rand(400, 600),
+              depth: rand(4000, 6000), // random depth between 4000-6000m
+              pressure: rand(400, 600), // random pressure between 400-600atm
               biome: "plain",
               hazard: null, poi: null, life: null, resource: null
             };
@@ -156,12 +159,13 @@ export default function AbyssGame() {
   }, []);
 
   // --- 3. RENDER LOOP ---
+  // useEffect to handle canvas rendering
   useEffect(() => {
     if (loading) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d'); // gets the 2D rendering context
     let animationFrameId;
 
     const handleResize = () => {
@@ -190,12 +194,14 @@ export default function AbyssGame() {
       const edgeThreshold = 100;
       const panSpeed = 5;
       
+      // Pan camera left/right based on mouse position near edges
       if (mouse.x > canvas.width - edgeThreshold) {
         camera.x -= panSpeed;
       } else if (mouse.x < edgeThreshold) {
         camera.x += panSpeed;
       }
       
+      // Pan camera up/down based on mouse position near edges
       if (mouse.y > canvas.height - edgeThreshold) {
         camera.y -= panSpeed;
       } else if (mouse.y < edgeThreshold) {
@@ -226,6 +232,7 @@ export default function AbyssGame() {
       ctx.translate(startX, startY);
 
       for (let r = 0; r < gridSize; r++) {
+        // Iterate over each row
         if (!grid[r]) continue;
         for (let c = 0; c < gridSize; c++) {
           const cell = grid[r][c];
@@ -346,9 +353,11 @@ export default function AbyssGame() {
       const maxY = 0;
       const minY = canvas.height - gridSizePx;
       
+      // Clamp camera to grid bounds
       gameState.current.camera.x = Math.max(minX, Math.min(maxX, gameState.current.camera.x));
       gameState.current.camera.y = Math.max(minY, Math.min(maxY, gameState.current.camera.y));
       
+      // Update last mouse position for dragging
       gameState.current.lastMouse = { x: e.clientX, y: e.clientY };
       return;
     }
@@ -357,9 +366,11 @@ export default function AbyssGame() {
 
     const { gridSize, cellSize, camera } = gameState.current;
 
+    // Calculate column and row based on mouse position and camera offset
     const col = Math.floor((mouseX - camera.x) / cellSize);
     const row = Math.floor((mouseY - camera.y) / cellSize);
 
+    // Out of bounds check
     if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) {
       if (gameState.current.activeCell) {
         gameState.current.activeCell = null;
@@ -371,9 +382,11 @@ export default function AbyssGame() {
       return;
     }
 
+    // Get the cell at the current mouse position
     const cell = gameState.current.grid[row]?.[col];
     if (!cell) return;
 
+    // If hovering over a new cell
     if (gameState.current.activeCell !== cell) {
       gameState.current.activeCell = cell;
 
@@ -383,11 +396,13 @@ export default function AbyssGame() {
         coords: `${row}, ${col}`
       });
 
+      // Hazard Handling
       if (cell.hazard) {
         setIsPanic(true);
         setWarningMsg(cell.hazard.type ? cell.hazard.type.replace('_', ' ') : "DANGER");
         gameState.current.shakeStrength = 5;
 
+        // Damage player if first time on this hazard
         const hazardKey = `${row},${col}`;
         if (!gameState.current.visitedHazards.has(hazardKey)) {
           gameState.current.visitedHazards.add(hazardKey);
@@ -408,6 +423,7 @@ export default function AbyssGame() {
         gameState.current.shakeStrength = 0;
       }
 
+      // Resource Collection
       if (cell.resource) {
         const resourceKey = `${row},${col}`;
         if (!gameState.current.collectedResources.has(resourceKey)) {
@@ -428,6 +444,7 @@ export default function AbyssGame() {
         }
       }
 
+      // Scan Results
       if (cell.poi || cell.life || cell.resource) {
         setScanResult({ poi: cell.poi, life: cell.life, resource: cell.resource });
       } else {
@@ -436,6 +453,7 @@ export default function AbyssGame() {
     }
   };
 
+  // --- 5. RESET RUN ---
   const resetRun = () => {
     gameState.current.health = 100;
     gameState.current.mineralValue = 0;
@@ -453,6 +471,7 @@ export default function AbyssGame() {
     setStatus({ depth: '--', pressure: '--', coords: '--' });
   };
 
+  // --- RENDER ---
   if (loading) return (
     <div className="loading-screen">
         INITIALIZING ABYSSAL INTERFACE...
@@ -505,12 +524,14 @@ export default function AbyssGame() {
         </div>
       </div>
 
+      {/* Panic Warning Overlay */}
       {isPanic && (
         <div className="warning-overlay">
           WARNING: {warningMsg}
         </div>
       )}
 
+      {/* End Game Overlay */}
       {gameStatus !== 'playing' && (
         <div className="end-overlay">
           <div className="end-card">

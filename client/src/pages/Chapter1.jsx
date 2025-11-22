@@ -69,6 +69,7 @@ const Chapter1 = () => {
         <StoryBlock top="40%" text="The sunlight began to fade at 200 meters." color="#caf0f8" />
         <StoryBlock top="60%" text="By 1000 meters, we were alone in the dark." color="#90e0ef" />
         <StoryBlock top="93%" text="And eventually... seafloor." color="#fff" />
+        <StoryBlock top="97%" text="Pick up the minerals and avoid the hazards at all costs." color="#48cae4" />
       </div>
       
       {/* PARTICLES */}
