@@ -1,102 +1,156 @@
 const express = require('express');
-const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
+const cors = require('cors');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// --- 1. MIDDLEWARE ---
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-const SIZE = 50;
-let grid = [];
+// --- 2. PROJECT ABYSS: GAME ENGINE LOGIC ---
+// This section handles the "Flashlight" game data. 
+// It reads your CSVs and builds a 50x50 grid in memory.
 
+const ABYSS_CONFIG = {
+    GRID_SIZE: 50,
+    DATA_DIR: path.join(__dirname, 'data')
+};
 
-// Function to load CSV Files into a Grid Format.
-function loadCSVGrid(filePath) {
+let WORLD_GRID = []; // Stores the generated world state
+
+// Helper: Create a blank grid
+const createEmptyGrid = () => {
+    const grid = [];
+    for (let r = 0; r < ABYSS_CONFIG.GRID_SIZE; r++) {
+        grid[r] = [];
+        for (let c = 0; c < ABYSS_CONFIG.GRID_SIZE; c++) {
+            grid[r][c] = {
+                row: r, col: c,
+                biome: 'plain',
+                depth: 0, pressure: 0,
+                hazard: null, poi: null, life: null, resource: null
+            };
+        }
+    }
+    return grid;
+};
+
+// Helper: Parse CSV with a Promise
+const parseCSV = (filename) => {
     return new Promise((resolve, reject) => {
-        const cells = [];
+        const results = [];
+        const filePath = path.join(ABYSS_CONFIG.DATA_DIR, filename);
+        
+        if (!fs.existsSync(filePath)) {
+            console.warn(`[Abyss] Warning: Data file missing: ${filename}`);
+            resolve([]);
+            return;
+        }
 
-        // Opens the files as a stream, not all simultaneously.
         fs.createReadStream(filePath)
-            // Piping it using csv() just parses the data into a CSV format and converts it to a JS object for us to read.
             .pipe(csv())
-            .on('data', (row) => {
-                const rows = Number(row.row);
-                const columns = Number(row.col);
+            .on('data', (data) => results.push(data))
+            .on('end', () => resolve(results))
+            .on('error', (err) => {
+                console.error(`[Abyss] Error reading ${filename}:`, err);
+                // Resolve empty on error to keep server alive
+                resolve([]); 
+            });
+    });
+};
 
-                // Pushing all guaranteed data in all files to all the sets.
-                // Values that are in some and not in others have a query, adjusting the value to null if non-present.
-                cells.push({
-                    row: Number(rows),
-                    col: Number(columns),
-                    x_km: row.x_km ? Number(cellRow.x_km) : null,
-                    y_km: row.y_km ? Number(cellRow.y_km) : null,
-                    lat: row.lat ? Number(row.lat) : null,
-                    lon: row.lon ? Number(row.lon) : null,
-                    depth_m: row.depth_m ? Number (row.depth_m) : null,
-                    pressure_atm: row.pressure_atm ? Number(row.pressure_atm) : null,
-                    biome: row.biome ? row.biome : null,
-                    temperature_c: row.temperature_c ? Number(row.temperature_c) : null,
-                    light_intensity: row.light_intensity ? Number(row.light_intensity) : null,
-                    terrain_roughness: row.terrain_roughness ? Number(row.terrain_roughness) : null,
-                    
-                    // Okay we don't know if we are using these all yet so these are here as filler.
-                    // We may remove or add as time goes on for the layers/POIs.
-                    corals: null,
-                    currents: null,
-                    hazards: [],
-                    life: [],
-                    poi: [],
-                    resourcecs: [],
-                });
+// Main Loader: Merges all CSV data into the Grid
+async function initializeAbyssWorld() {
+    console.log("🌊 [Abyss] Booting Submersible Systems...");
+    WORLD_GRID = createEmptyGrid();
 
-                // The previous code just pushed all that data into an array for us to utilize easily.
-            }).on('end', () => {
-                // Creates the 2D array (50x50).
-                const finalGrid = Array.from({ length: SIZE }, () => {
-                    Array.from({ length: SIZE }, () => null)
-                for (const cell of cells) {
-                    const { row, col } = cell;
-                    if (row >= 0 && row < SIZE && col >= 0 && col < size) {
-                        finalGrid[row][col] = cell;
-                    }
-                }
-                resolve(finalGrid);
-                });
-            })
-    })
+    try {
+        // Load all data files in parallel
+        const [cells, hazards, pois, life, resources] = await Promise.all([
+            parseCSV('cells.csv'),
+            parseCSV('hazards.csv'),
+            parseCSV('poi.csv'),
+            parseCSV('life.csv'),
+            parseCSV('resources.csv')
+        ]);
+
+        // 1. Map Base Cell Data (Depth, Biome)
+        cells.forEach(c => {
+            const r = parseInt(c.row);
+            const col = parseInt(c.col);
+            if (WORLD_GRID[r]?.[col]) {
+                WORLD_GRID[r][col].depth = parseFloat(c.depth_m);
+                WORLD_GRID[r][col].biome = c.biome;
+                WORLD_GRID[r][col].pressure = parseFloat(c.pressure_atm);
+            }
+        });
+
+        // 2. Map Hazards
+        hazards.forEach(h => {
+            const r = parseInt(h.row), c = parseInt(h.col);
+            if (WORLD_GRID[r]?.[c]) {
+                WORLD_GRID[r][c].hazard = { type: h.type, severity: h.severity, notes: h.notes };
+            }
+        });
+
+        // 3. Map POIs (Wrecks)
+        pois.forEach(p => {
+            const r = parseInt(p.row), c = parseInt(p.col);
+            if (WORLD_GRID[r]?.[c]) {
+                WORLD_GRID[r][c].poi = { id: p.id, label: p.label, desc: p.description };
+            }
+        });
+
+        // 4. Map Life
+        life.forEach(l => {
+            const r = parseInt(l.row), c = parseInt(l.col);
+            if (WORLD_GRID[r]?.[c]) {
+                WORLD_GRID[r][c].life = { species: l.species, threat: parseInt(l.threat_level) };
+            }
+        });
+
+        // 5. Map Resources
+        resources.forEach(res => {
+            const r = parseInt(res.row), c = parseInt(res.col);
+            if (WORLD_GRID[r]?.[c]) {
+                WORLD_GRID[r][c].resource = { type: res.type, value: res.economic_value };
+            }
+        });
+
+        console.log("✅ [Abyss] World Generation Complete.");
+    } catch (err) {
+        console.error("❌ [Abyss] Initialization Failed:", err);
+    }
 }
 
-(async () => { grid = await loadCSVGrid(`data/cells.csv`) });
+// --- 3. API ROUTES ---
 
-// Fetches all cells in the cells grid.
-app.use(`/api/cells`, (req, res) => {
+// Game State Endpoint
+app.get('/api/gamestate', (req, res) => {
     res.json({
-        width: grid[0]?.length || 0,
-        height: grid.length,
-        cells: grid,
+        grid: WORLD_GRID,
+        metadata: {
+            rows: ABYSS_CONFIG.GRID_SIZE,
+            cols: ABYSS_CONFIG.GRID_SIZE
+        }
     });
 });
 
-// Fetches a specific cell.
-app.use(`/api/cells/:row/:col`, (req, res) => {
-    const row = req.params.row;
-    const col = req.params.col;
-    const cell = grid[row]?.[col];
-
-    if(!cell) return res.status(404).json({ message: "Cell Not Found." });
-    res.json(cell);
+// Health Check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// Static Loading.
-app.use('/', express.static('client'));
 
-app.use('/', (req, res) => {
-    res.sendFile('index.html', { root: 'client' });
-});
-
-app.listen(port, () => {
-    console.log('Listening on port ' + port);
+// --- 4. SERVER STARTUP ---
+// We wait for the game world to initialize before opening the port
+initializeAbyssWorld().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
 });

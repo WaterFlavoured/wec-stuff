@@ -1,10 +1,12 @@
-import React from 'react'
-
+import React from 'react';
+import AbyssGame from '../AbyssGame';
 
 const Home = () => {
   return (
-    <div>Home</div>
-  )
-}
+    <div className="w-full h-screen bg-black">
+      <AbyssGame />
+    </div>
+  );
+};
 
-export default Home
+export default Home;
