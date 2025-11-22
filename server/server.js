@@ -9,6 +9,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+const SIZE = 50;
+let grid = [];
+
+
 // Function to load CSV Files into a Grid Format.
 function loadCSVGrid(filePath) {
     return new Promise((resolve, reject) => {
@@ -64,6 +68,27 @@ function loadCSVGrid(filePath) {
             })
     })
 }
+
+(async () => { grid = await loadCSVGrid(`data/cells.csv`) });
+
+// Fetches all cells in the cells grid.
+app.use(`/api/cells`, (req, res) => {
+    res.json({
+        width: grid[0]?.length || 0,
+        height: grid.length,
+        cells: grid,
+    });
+});
+
+// Fetches a specific cell.
+app.use(`/api/cells/:row/:col`, (req, res) => {
+    const row = req.params.row;
+    const col = req.params.col;
+    const cell = grid[row]?.[col];
+
+    if(!cell) return res.status(404).json({ message: "Cell Not Found." });
+    res.json(cell);
+});
 
 // Static Loading.
 app.use('/', express.static('client'));
