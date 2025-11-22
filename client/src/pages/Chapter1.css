@@ -1,0 +1,95 @@
+/* Chapter1.css */
+
+/* The main tall container */
+.chapter-container {
+  height: 1000vh;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* The fixed overlay for the title */
+.title-card {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* Allows clicking through the text */
+  z-index: 5;
+}
+
+.title-content {
+  text-align: center;
+}
+
+.chapter-title {
+  font-size: 5rem;
+  margin-bottom: 0;
+  color: #fff;
+  text-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+  font-family: 'Arial Black', sans-serif;
+}
+
+.chapter-subtitle {
+  font-size: 2rem;
+  margin-top: 0;
+  margin-bottom: 100px;
+  color: #fff;
+  font-weight: 300;
+  font-family: sans-serif;
+}
+
+.scroll-hint {
+  color: white;
+  margin-top: 0;
+  font-family: sans-serif;
+  opacity: 0.8;
+}
+
+/* The wrapper that holds the sticky submarine */
+.submarine-wrapper {
+  position: fixed;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+/* Container for the text blocks */
+.story-layer {
+  width: 100%;
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+/* Individual story text blocks */
+.story-block {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: bold;
+  padding: 0 20px;
+  box-sizing: border-box;
+  font-family: sans-serif;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Base style for bubbles */
+.bubble {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.submarine-image {
+  width: 150px;
+  height: auto;
+}

@@ -5,25 +5,22 @@ const csv = require('csv-parser');
 const cors = require('cors');
 
 const app = express();
+// node.js port, we have a proxy set up so client can reach backend.
 const PORT = process.env.PORT || 3000;
 
-// --- 1. MIDDLEWARE ---
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- 2. PROJECT ABYSS: GAME ENGINE LOGIC ---
-// This section handles the "Flashlight" game data. 
-// It reads your CSVs and builds a 50x50 grid in memory.
-
+// Grid configs for all the csv files.
 const ABYSS_CONFIG = {
     GRID_SIZE: 50,
     DATA_DIR: path.join(__dirname, 'data')
 };
 
-let WORLD_GRID = []; // Stores the generated world state
+let WORLD_GRID = [];
 
-// Helper: Create a blank grid
+// Creates a blank grid to superpose other things on.
 const createEmptyGrid = () => {
     const grid = [];
     for (let r = 0; r < ABYSS_CONFIG.GRID_SIZE; r++) {
@@ -40,7 +37,7 @@ const createEmptyGrid = () => {
     return grid;
 };
 
-// Helper: Parse CSV with a Promise
+// Parses the CSV files into readable content, and pushes said content into an array.
 const parseCSV = (filename) => {
     return new Promise((resolve, reject) => {
         const results = [];
