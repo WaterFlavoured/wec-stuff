@@ -432,6 +432,9 @@ export default function AbyssGame() {
           gameState.current.mineralValue = newMineralValue;
           setMineralValue(newMineralValue);
           
+          // Store resource info before removing it
+          collectedResourceInfo = cell.resource;
+          
           // Remove the resource from the cell
           cell.resource = null;
 
