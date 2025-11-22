@@ -1,7 +1,7 @@
 import React from 'react';
 import './Home.css';
 import { useNavigate } from 'react-router-dom';
-import submarineImg from '../Assets/submarine.png';
+import submarineImg from '../assets/submarine-clipart-xl.png';
 
 const Home = () => {
   const navigate = useNavigate();

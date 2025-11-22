@@ -83,8 +83,8 @@ const Chapter1 = () => {
       <Bubble top="90%" left="50%" speed={-600} scroll={smoothScroll} />
 
       <Fish top="25%" left="5%" speed={1000} scroll={smoothScroll} />
-      <Fish top="25.2%" left="7%" speed={1000} scroll={smoothScroll} />
-      <Fish top="25.1%" left="6%" speed={1000} scroll={smoothScroll} />
+      <Fish top="25.4%" left="8%" speed={1000} scroll={smoothScroll} />
+      <Fish top="26%" left="6%" speed={1000} scroll={smoothScroll} />
     </motion.div>
   );
 };
