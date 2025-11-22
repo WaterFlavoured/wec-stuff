@@ -4,7 +4,6 @@ import { Routes, Route } from 'react-router-dom';
 
 import Home from './pages/Home.jsx';
 import Chapter1 from './pages/Chapter1.jsx';
-import Chapter2 from './pages/Chapter2.jsx';
 import Chapter3 from './pages/Chapter3.jsx';
 import AbyssGame from './AbyssGame.jsx';
 
