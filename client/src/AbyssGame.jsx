@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 // --- MOCK DATA FALLBACKS ---
-// Used if the server is unreachable so the app doesn't crash.
 const RAW_HAZARDS = [
   { r: 26, c: 11, type: "thermal_vent", label: "Active Chimney" },
   { r: 42, c: 44, type: "acidic_zone", label: "Low pH Mass" },
@@ -32,13 +31,13 @@ export default function AbyssGame() {
   
   // UI State
   const [loading, setLoading] = useState(true);
-  const [connectionMode, setConnectionMode] = useState('CONNECTING'); // CONNECTING, ONLINE, OFFLINE
+  const [connectionMode, setConnectionMode] = useState('CONNECTING');
   const [status, setStatus] = useState({ depth: '--', pressure: '--', coords: '--' });
   const [scanResult, setScanResult] = useState(null);
   const [isPanic, setIsPanic] = useState(false);
   const [warningMsg, setWarningMsg] = useState('');
 
-  // Mutable Game State (Refs for performance in render loop)
+  // Mutable Game State
   const gameState = useRef({
     grid: [], 
     gridSize: 50,
@@ -52,9 +51,9 @@ export default function AbyssGame() {
   useEffect(() => {
     const initGridData = async () => {
       try {
-        // Attempt to fetch from Express Server
+        // Fetch from Express Server
         const response = await fetch('http://localhost:3000/api/gamestate', {
-            signal: AbortSignal.timeout(3000) // 3s timeout
+            signal: AbortSignal.timeout(3000)
         });
         
         if (!response.ok) throw new Error('Server error');
@@ -68,7 +67,7 @@ export default function AbyssGame() {
       } catch (err) {
         console.warn("Backend unreachable, using SIMULATION mode.", err);
         
-        // Generate Fallback Grid
+        // Fallback Grid Generation
         const grid = [];
         const GRID_SIZE = 50;
         for (let r = 0; r < GRID_SIZE; r++) {
@@ -90,7 +89,7 @@ export default function AbyssGame() {
         RAW_POI.forEach(p => { if (grid[p.r]?.[p.c]) grid[p.r][p.c].poi = p; });
         RAW_LIFE.forEach(l => { if (grid[l.r]?.[l.c]) grid[l.r][l.c].life = l; });
         
-        // Procedural Hazards
+        // Add procedural hazards
         for (let i = 0; i < 40; i++) {
             let r = randInt(0, 49), c = randInt(0, 49);
             grid[r][c].hazard = { type: "thermal_vent", label: "Unknown Thermal Spike" };
@@ -127,7 +126,7 @@ export default function AbyssGame() {
     const render = () => {
       const { grid, mouse, shakeStrength, gridSize, cellSize } = gameState.current;
       
-      // 1. Clear Background
+      // Clear
       ctx.fillStyle = '#050505';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -136,7 +135,7 @@ export default function AbyssGame() {
           return; 
       }
 
-      // 2. Calculate Camera Shake
+      // Camera Shake
       const gridSizePx = gridSize * cellSize;
       let shakeX = 0, shakeY = 0;
       if (shakeStrength > 0) {
@@ -146,7 +145,7 @@ export default function AbyssGame() {
       const startX = (canvas.width - gridSizePx) / 2 + shakeX;
       const startY = (canvas.height - gridSizePx) / 2 + shakeY;
 
-      // 3. Draw Visible Grid (Optimized)
+      // Draw Visible Area Only
       const range = 6; 
       const mCol = Math.floor((mouse.x - startX) / cellSize);
       const mRow = Math.floor((mouse.y - startY) / cellSize);
@@ -167,7 +166,7 @@ export default function AbyssGame() {
           const x = c * cellSize;
           const y = r * cellSize;
 
-          // Ground
+          // Biome
           ctx.fillStyle = '#001a11';
           if (cell.biome === 'slope') ctx.fillStyle = '#00261a';
           if (cell.hazard) ctx.fillStyle = '#1a0a0a'; 
@@ -185,7 +184,7 @@ export default function AbyssGame() {
           else if (cell.life) ctx.fillText("🦑", cx, cy);
           else if (cell.resource) ctx.fillText("💎", cx, cy);
 
-          // Debug Coords
+          // Debug Text
           ctx.fillStyle = "rgba(0, 255, 157, 0.1)";
           ctx.font = "8px monospace";
           ctx.fillText(`${r},${c}`, cx, y + cellSize - 5);
@@ -193,7 +192,7 @@ export default function AbyssGame() {
       }
       ctx.restore();
 
-      // 4. Flashlight Mask
+      // Flashlight Mask
       ctx.save();
       ctx.globalCompositeOperation = 'destination-in';
       const flashlight = ctx.createRadialGradient(mouse.x, mouse.y, 10, mouse.x, mouse.y, 180);
@@ -204,7 +203,7 @@ export default function AbyssGame() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      // 5. Panic Overlay
+      // Panic Overlay
       if (shakeStrength > 0) {
         ctx.save();
         ctx.globalCompositeOperation = 'source-over';
@@ -214,7 +213,7 @@ export default function AbyssGame() {
         ctx.fillStyle = panicGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Glitch Lines
+        // Glitch
         ctx.fillStyle = `rgba(255, 0, 0, ${Math.random() * 0.2})`;
         ctx.fillRect(0, Math.random() * canvas.height, canvas.width, 2);
         ctx.restore();
