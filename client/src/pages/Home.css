@@ -1,0 +1,131 @@
+.home {
+    min-height: 100vh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, #6ecbff, #0077b6, #001f3f);
+    position: relative;  
+    overflow: hidden;
+}
+
+.title {
+    font-size: 3rem;
+    color: white;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin-bottom: 30px;
+}
+
+.submarine {
+    width: 180px;
+    height: auto;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+}
+
+
+
+.play-button {
+    margin-top: 30px;
+    padding: 0.7rem 2.2rem;
+    border-radius: 999px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: linear-gradient(135deg, #190368, #26b2b5, #190368);
+    color: white;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.play-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
+}
+
+.play-button:active {
+    transform: translateY(0);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.7);
+}
+
+
+
+.bubbles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.bubble {
+    position: absolute;
+    bottom: -40px; /* start just below the screen */
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+    animation: rise 12s linear infinite;
+    opacity: 0;
+}
+
+.bubble:nth-child(1) {
+    left: 15%;
+    animation-duration: 11s;
+    animation-delay: 0s;
+    transform: scale(1);
+}
+
+.bubble:nth-child(2) {
+    left: 30%;
+    animation-duration: 13s;
+    animation-delay: 2s;
+    transform: scale(0.8);
+}
+
+.bubble:nth-child(3) {
+    left: 50%;
+    animation-duration: 10s;
+    animation-delay: 1s;
+    transform: scale(1.1);
+}
+
+.bubble:nth-child(4) {
+    left: 70%;
+    animation-duration: 14s;
+    animation-delay: 3s;
+    transform: scale(0.9);
+}
+
+.bubble:nth-child(5) {
+    left: 85%;
+    animation-duration: 12s;
+    animation-delay: 4s;
+    transform: scale(1.2);
+}
+
+.bubble:nth-child(6) {
+    left: 40%;
+    animation-duration: 15s;
+    animation-delay: 1.5s;
+    transform: scale(0.7);
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-110vh);
+    opacity: 0;
+  }
+}
