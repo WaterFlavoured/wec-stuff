@@ -408,6 +408,7 @@ export default function AbyssGame() {
         gameState.current.shakeStrength = 0;
       }
 
+      let collectedResourceInfo = null;
       if (cell.resource) {
         const resourceKey = `${row},${col}`;
         if (!gameState.current.collectedResources.has(resourceKey)) {
@@ -415,6 +416,9 @@ export default function AbyssGame() {
           const newMineralValue = gameState.current.mineralValue + Number(cell.resource.value);
           gameState.current.mineralValue = newMineralValue;
           setMineralValue(newMineralValue);
+          
+          // Store resource info before removing it
+          collectedResourceInfo = cell.resource;
           
           // Remove the resource from the cell
           cell.resource = null;
@@ -428,8 +432,8 @@ export default function AbyssGame() {
         }
       }
 
-      if (cell.poi || cell.life || cell.resource) {
-        setScanResult({ poi: cell.poi, life: cell.life, resource: cell.resource });
+      if (cell.poi || cell.life || cell.resource || collectedResourceInfo) {
+        setScanResult({ poi: cell.poi, life: cell.life, resource: cell.resource || collectedResourceInfo });
       } else {
         setScanResult(null);
       }
