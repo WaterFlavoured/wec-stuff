@@ -44,8 +44,8 @@ export default function AbyssGame() {
   const [scanResult, setScanResult] = useState(null);
   const [isPanic, setIsPanic] = useState(false);
   const [warningMsg, setWarningMsg] = useState('');
-  const [hazardHits, setHazardHits] = useState(0);
-  const [mineralsCollected, setMineralsCollected] = useState(0);
+  const [health, setHealth] = useState(100);
+  const [mineralValue, setMineralValue] = useState(0);
   const [gameStatus, setGameStatus] = useState('playing');
 
   // Mutable Game State
@@ -59,8 +59,8 @@ export default function AbyssGame() {
     lastMouse: { x: 0, y: 0 },
     shakeStrength: 0,
     activeCell: null,
-    hazardHits: 0,
-    mineralsCollected: 0,
+    health: 100,
+    mineralValue: 0,
     gameStatus: 'playing',
     visitedHazards: new Set(),
     collectedResources: new Set(),
@@ -391,11 +391,11 @@ export default function AbyssGame() {
         const hazardKey = `${row},${col}`;
         if (!gameState.current.visitedHazards.has(hazardKey)) {
           gameState.current.visitedHazards.add(hazardKey);
-          const newHazardHits = hazardHits + 1;
-          gameState.current.hazardHits = newHazardHits;
-          setHazardHits(newHazardHits);
+          const newHealth = health - 10;
+          gameState.current.health = newHealth;
+          setHealth(newHealth);
 
-          if (newHazardHits >= 5) {
+          if (newHealth <= 0) {
             setGameStatus('dead');
             gameState.current.gameStatus = 'dead';
             setIsPanic(false);
@@ -412,11 +412,14 @@ export default function AbyssGame() {
         const resourceKey = `${row},${col}`;
         if (!gameState.current.collectedResources.has(resourceKey)) {
           gameState.current.collectedResources.add(resourceKey);
-          const newMineralCount = mineralsCollected + 1;
-          gameState.current.mineralsCollected = newMineralCount;
-          setMineralsCollected(newMineralCount);
+          const newMineralValue = gameState.current.mineralValue + Number(cell.resource.value);
+          gameState.current.mineralValue = newMineralValue;
+          setMineralValue(newMineralValue);
+          
+          // Remove the resource from the cell
+          cell.resource = null;
 
-          if (newMineralCount >= 10) {
+          if (newMineralValue >= 1000000) {
             setGameStatus('success');
             gameState.current.gameStatus = 'success';
             setIsPanic(false);
@@ -434,15 +437,15 @@ export default function AbyssGame() {
   };
 
   const resetRun = () => {
-    gameState.current.hazardHits = 0;
-    gameState.current.mineralsCollected = 0;
+    gameState.current.health = 100;
+    gameState.current.mineralValue = 0;
     gameState.current.gameStatus = 'playing';
     gameState.current.visitedHazards.clear();
     gameState.current.collectedResources.clear();
     gameState.current.activeCell = null;
     gameState.current.shakeStrength = 0;
-    setHazardHits(0);
-    setMineralsCollected(0);
+    setHealth(100);
+    setMineralValue(0);
     setGameStatus('playing');
     setIsPanic(false);
     setWarningMsg('');
@@ -469,26 +472,35 @@ export default function AbyssGame() {
 
       {/* HUD */}
       <div className="hud-container">
-        <div className="hud-panel">
-          <h2 className="panel-header">
-            <span>Status</span>
-            <span className={connectionMode === 'ONLINE' ? "connection-status online" : "connection-status offline"}>[{connectionMode}]</span>
-          </h2>
-          <div className="status-list">
-             <div className="status-item"><span>DEPTH:</span> <span className="status-value">{status.depth}</span></div>
-             <div className="status-item"><span>PRESSURE:</span> <span className="status-value">{status.pressure}</span></div>
-             <div className="status-item"><span>COORDS:</span> <span className="status-value">{status.coords}</span></div>
-             <div className="status-item"><span>HAZARDS:</span> <span className="status-value">{hazardHits}/5</span></div>
-             <div className="status-item"><span>MINERALS:</span> <span className="status-value">{mineralsCollected}/10</span></div>
+        <div className="health-bar-container">
+          <div className="health-bar-label">HULL INTEGRITY</div>
+          <div className="health-bar-outer">
+            <div className="health-bar-inner" style={{ width: `${health}%`, backgroundColor: health > 60 ? '#00ff9d' : health > 30 ? '#ffaa00' : '#ff0000' }}></div>
           </div>
+          <div className="health-bar-text">{health}%</div>
         </div>
+        
+        <div className="hud-panels-wrapper">
+          <div className="hud-panel">
+            <h2 className="panel-header">
+              <span>Status</span>
+              <span className={connectionMode === 'ONLINE' ? "connection-status online" : "connection-status offline"}>[{connectionMode}]</span>
+            </h2>
+            <div className="status-list">
+               <div className="status-item"><span>DEPTH:</span> <span className="status-value">{status.depth}</span></div>
+               <div className="status-item"><span>PRESSURE:</span> <span className="status-value">{status.pressure}</span></div>
+               <div className="status-item"><span>COORDS:</span> <span className="status-value">{status.coords}</span></div>
+               <div className="status-item"><span>MINERALS:</span> <span className="status-value">${mineralValue.toLocaleString()}/1M</span></div>
+            </div>
+          </div>
 
-        <div className={`hud-panel scan-panel ${scanResult ? 'visible' : 'hidden'}`}>
-          <h2 className="panel-header">Scan Results</h2>
-          <div className="scan-results">
-            {scanResult?.poi && <div><div className="scan-item-poi">Target: {scanResult.poi.label}</div><div className="scan-item-desc">{scanResult.poi.desc}</div></div>}
-            {scanResult?.life && <div><div className="scan-item-life">Bio-sign: {scanResult.life.species.replace(/_/g, ' ')}</div><div className="scan-item-desc">Threat: {scanResult.life.threat}</div></div>}
-            {scanResult?.resource && <div><div className="scan-item-resource">Mineral: {scanResult.resource.type.replace(/_/g, ' ')}</div><div className="scan-item-detail">Value: ${scanResult.resource.value}</div></div>}
+          <div className={`hud-panel scan-panel ${scanResult ? 'visible' : 'hidden'}`}>
+            <h2 className="panel-header">Scan Results</h2>
+            <div className="scan-results">
+              {scanResult?.poi && <div><div className="scan-item-poi">Target: {scanResult.poi.label}</div><div className="scan-item-desc">{scanResult.poi.desc}</div></div>}
+              {scanResult?.life && <div><div className="scan-item-life">Bio-sign: {scanResult.life.species.replace(/_/g, ' ')}</div><div className="scan-item-desc">Threat: {scanResult.life.threat}</div></div>}
+              {scanResult?.resource && <div><div className="scan-item-resource">Mineral: {scanResult.resource.type.replace(/_/g, ' ')}</div><div className="scan-item-detail">Value: ${scanResult.resource.value}</div></div>}
+            </div>
           </div>
         </div>
       </div>
@@ -506,8 +518,8 @@ export default function AbyssGame() {
               {gameStatus === 'dead' ? 'VESSEL CRUSHED' : 'HARVEST COMPLETE'}
             </div>
             <div className="end-metrics">
-              <div>Hazards contacted: {hazardHits}/5</div>
-              <div>Minerals collected: {mineralsCollected}/10</div>
+              <div>Final hull integrity: {health}%</div>
+              <div>Mineral value collected: ${mineralValue.toLocaleString()}</div>
             </div>
             <div className="end-actions">
               <button className="end-button" onClick={resetRun}>

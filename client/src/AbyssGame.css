@@ -42,8 +42,61 @@
   pointer-events: none;
   padding: 20px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   z-index: 10;
+}
+
+/* Health Bar */
+.health-bar-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  background-color: rgba(0, 20, 10, 0.8);
+  border: 1px solid #004d33;
+  padding: 12px 20px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+}
+
+.health-bar-label {
+  color: #00ff9d;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.health-bar-outer {
+  flex: 1;
+  height: 24px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 1px solid #004d33;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.health-bar-inner {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.health-bar-text {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: bold;
+  min-width: 45px;
+  text-align: right;
+}
+
+/* HUD Panels Wrapper */
+.hud-panels-wrapper {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 }
 
 /* HUD Panel Base */
