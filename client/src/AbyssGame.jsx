@@ -43,6 +43,9 @@ export default function AbyssGame() {
   const [scanResult, setScanResult] = useState(null);
   const [isPanic, setIsPanic] = useState(false);
   const [warningMsg, setWarningMsg] = useState('');
+  const [hazardHits, setHazardHits] = useState(0);
+  const [mineralsCollected, setMineralsCollected] = useState(0);
+  const [gameStatus, setGameStatus] = useState('playing');
 
   // Mutable Game State
   const gameState = useRef({
@@ -52,6 +55,11 @@ export default function AbyssGame() {
     mouse: { x: -1000, y: -1000 },
     shakeStrength: 0,
     activeCell: null,
+    hazardHits: 0,
+    mineralsCollected: 0,
+    gameStatus: 'playing',
+    visitedHazards: new Set(),
+    collectedResources: new Set(),
     images: {
       hazard: null,
       poi: null,
@@ -273,6 +281,7 @@ export default function AbyssGame() {
   // --- 4. MOUSE HANDLER ---
   const handleMouseMove = (e) => {
     if (loading || !canvasRef.current) return;
+    if (gameStatus !== 'playing') return;
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -316,9 +325,42 @@ export default function AbyssGame() {
         setIsPanic(true);
         setWarningMsg(cell.hazard.type ? cell.hazard.type.replace('_', ' ') : "DANGER");
         gameState.current.shakeStrength = 5;
+
+        const hazardKey = `${row},${col}`;
+        if (!gameState.current.visitedHazards.has(hazardKey)) {
+          gameState.current.visitedHazards.add(hazardKey);
+          const newHazardHits = hazardHits + 1;
+          gameState.current.hazardHits = newHazardHits;
+          setHazardHits(newHazardHits);
+
+          if (newHazardHits >= 5) {
+            setGameStatus('dead');
+            gameState.current.gameStatus = 'dead';
+            setIsPanic(false);
+            gameState.current.shakeStrength = 0;
+            return;
+          }
+        }
       } else {
         setIsPanic(false);
         gameState.current.shakeStrength = 0;
+      }
+
+      if (cell.resource) {
+        const resourceKey = `${row},${col}`;
+        if (!gameState.current.collectedResources.has(resourceKey)) {
+          gameState.current.collectedResources.add(resourceKey);
+          const newMineralCount = mineralsCollected + 1;
+          gameState.current.mineralsCollected = newMineralCount;
+          setMineralsCollected(newMineralCount);
+
+          if (newMineralCount >= 10) {
+            setGameStatus('success');
+            gameState.current.gameStatus = 'success';
+            setIsPanic(false);
+            gameState.current.shakeStrength = 0;
+          }
+        }
       }
 
       if (cell.poi || cell.life || cell.resource) {
@@ -327,6 +369,23 @@ export default function AbyssGame() {
         setScanResult(null);
       }
     }
+  };
+
+  const resetRun = () => {
+    gameState.current.hazardHits = 0;
+    gameState.current.mineralsCollected = 0;
+    gameState.current.gameStatus = 'playing';
+    gameState.current.visitedHazards.clear();
+    gameState.current.collectedResources.clear();
+    gameState.current.activeCell = null;
+    gameState.current.shakeStrength = 0;
+    setHazardHits(0);
+    setMineralsCollected(0);
+    setGameStatus('playing');
+    setIsPanic(false);
+    setWarningMsg('');
+    setScanResult(null);
+    setStatus({ depth: '--', pressure: '--', coords: '--' });
   };
 
   if (loading) return (
@@ -354,6 +413,8 @@ export default function AbyssGame() {
              <div className="status-item"><span>DEPTH:</span> <span className="status-value">{status.depth}</span></div>
              <div className="status-item"><span>PRESSURE:</span> <span className="status-value">{status.pressure}</span></div>
              <div className="status-item"><span>COORDS:</span> <span className="status-value">{status.coords}</span></div>
+             <div className="status-item"><span>HAZARDS:</span> <span className="status-value">{hazardHits}/5</span></div>
+             <div className="status-item"><span>MINERALS:</span> <span className="status-value">{mineralsCollected}/10</span></div>
           </div>
         </div>
 
@@ -370,6 +431,25 @@ export default function AbyssGame() {
       {isPanic && (
         <div className="warning-overlay">
           WARNING: {warningMsg}
+        </div>
+      )}
+
+      {gameStatus !== 'playing' && (
+        <div className="end-overlay">
+          <div className="end-card">
+            <div className="end-title">
+              {gameStatus === 'dead' ? 'VESSEL CRUSHED' : 'HARVEST COMPLETE'}
+            </div>
+            <div className="end-metrics">
+              <div>Hazards contacted: {hazardHits}/5</div>
+              <div>Minerals collected: {mineralsCollected}/10</div>
+            </div>
+            <div className="end-actions">
+              <button className="end-button" onClick={resetRun}>
+                {gameStatus === 'dead' ? 'Retry Dive' : 'Dive Again'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
