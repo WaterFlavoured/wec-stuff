@@ -322,8 +322,8 @@ export default function AbyssGame() {
           <h2 className="panel-header">Scan Results</h2>
           <div className="scan-results">
             {scanResult?.poi && <div><div className="scan-item-poi">Target: {scanResult.poi.label}</div><div className="scan-item-desc">{scanResult.poi.desc}</div></div>}
-            {scanResult?.life && <div><div className="scan-item-life">Bio-sign: {scanResult.life.species}</div><div className="scan-item-desc">Threat: {scanResult.life.threat}</div></div>}
-            {scanResult?.resource && <div><div className="scan-item-resource">Mineral: {scanResult.resource.type}</div><div className="scan-item-detail">Value: ${scanResult.resource.value}</div></div>}
+            {scanResult?.life && <div><div className="scan-item-life">Bio-sign: {scanResult.life.species.replace(/_/g, ' ')}</div><div className="scan-item-desc">Threat: {scanResult.life.threat}</div></div>}
+            {scanResult?.resource && <div><div className="scan-item-resource">Mineral: {scanResult.resource.type.replace(/_/g, ' ')}</div><div className="scan-item-detail">Value: ${scanResult.resource.value}</div></div>}
           </div>
         </div>
       </div>
