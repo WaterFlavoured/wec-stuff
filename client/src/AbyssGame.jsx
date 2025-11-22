@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './AbyssGame.css';
 
+// Import image assets
+import hazardIcon from './assets/hazard.png';
+import poiIcon from './assets/poi.png';
+import lifeIcon from './assets/life.png';
+import resourceIcon from './assets/resource.png';
+
 // --- MOCK DATA FALLBACKS ---
 const RAW_HAZARDS = [
   { r: 26, c: 11, type: "thermal_vent", label: "Active Chimney" },
@@ -45,10 +51,39 @@ export default function AbyssGame() {
     cellSize: 40,
     mouse: { x: -1000, y: -1000 },
     shakeStrength: 0,
-    activeCell: null
+    activeCell: null,
+    images: {
+      hazard: null,
+      poi: null,
+      life: null,
+      resource: null
+    }
   });
 
-  // --- 1. INITIALIZATION ---
+  // --- 1. PRELOAD IMAGES ---
+  useEffect(() => {
+    const loadImage = (src) => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    };
+
+    Promise.all([
+      loadImage(hazardIcon),
+      loadImage(poiIcon),
+      loadImage(lifeIcon),
+      loadImage(resourceIcon)
+    ]).then(([hazard, poi, life, resource]) => {
+      gameState.current.images = { hazard, poi, life, resource };
+    }).catch(err => {
+      console.warn("Failed to load images:", err);
+    });
+  }, []);
+
+  // --- 2. INITIALIZATION ---
   useEffect(() => {
     const initGridData = async () => {
       try {
@@ -106,7 +141,7 @@ export default function AbyssGame() {
     initGridData();
   }, []);
 
-  // --- 2. RENDER LOOP ---
+  // --- 3. RENDER LOOP ---
   useEffect(() => {
     if (loading) return;
     const canvas = canvasRef.current;
@@ -174,16 +209,20 @@ export default function AbyssGame() {
           ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
 
           // Icons
-          ctx.font = "20px Arial";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
           const cx = x + cellSize / 2;
           const cy = y + cellSize / 2;
+          const iconSize = 24;
+          const { images } = gameState.current;
 
-          if (cell.hazard) ctx.fillText("⚠️", cx, cy);
-          else if (cell.poi) ctx.fillText("⚓", cx, cy);
-          else if (cell.life) ctx.fillText("🦑", cx, cy);
-          else if (cell.resource) ctx.fillText("💎", cx, cy);
+          if (cell.hazard && images.hazard) {
+            ctx.drawImage(images.hazard, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
+          } else if (cell.poi && images.poi) {
+            ctx.drawImage(images.poi, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
+          } else if (cell.life && images.life) {
+            ctx.drawImage(images.life, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
+          } else if (cell.resource && images.resource) {
+            ctx.drawImage(images.resource, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
+          }
 
           // Debug Text
           ctx.fillStyle = "rgba(0, 255, 157, 0.1)";
@@ -231,7 +270,7 @@ export default function AbyssGame() {
     };
   }, [loading]);
 
-  // --- 3. MOUSE HANDLER ---
+  // --- 4. MOUSE HANDLER ---
   const handleMouseMove = (e) => {
     if (loading || !canvasRef.current) return;
 
