@@ -136,6 +136,63 @@ app.get('/api/gamestate', (req, res) => {
     });
 });
 
+// API endpoint for coral data (Chapter 3)
+app.get('/api/corals', async (req, res) => {
+    try {
+        const corals = await parseCSV('corals.csv');
+        const processedCorals = corals.map(c => ({
+            row: parseInt(c.row),
+            col: parseInt(c.col),
+            coral_cover_pct: parseInt(c.coral_cover_pct),
+            health_index: parseFloat(c.health_index),
+            bleaching_risk: parseFloat(c.bleaching_risk),
+            biodiversity_index: parseFloat(c.biodiversity_index)
+        }));
+        res.json(processedCorals);
+    } catch (err) {
+        console.error('[Abyss] Error fetching corals:', err);
+        res.status(500).json({ error: 'Failed to fetch coral data' });
+    }
+});
+
+// API endpoint for hazards (Chapter 3)
+app.get('/api/hazards', async (req, res) => {
+    try {
+        const hazards = await parseCSV('hazards.csv');
+        const processedHazards = hazards.map(h => ({
+            row: parseInt(h.row),
+            col: parseInt(h.col),
+            type: h.type,
+            severity: parseInt(h.severity),
+            notes: h.notes
+        }));
+        res.json(processedHazards);
+    } catch (err) {
+        console.error('[Abyss] Error fetching hazards:', err);
+        res.status(500).json({ error: 'Failed to fetch hazard data' });
+    }
+});
+
+// API endpoint for POIs (Chapter 3)
+app.get('/api/poi', async (req, res) => {
+    try {
+        const pois = await parseCSV('poi.csv');
+        const processedPOIs = pois.map(p => ({
+            id: p.id,
+            row: parseInt(p.row),
+            col: parseInt(p.col),
+            category: p.category,
+            label: p.label,
+            description: p.description,
+            research_value: parseInt(p.research_value)
+        }));
+        res.json(processedPOIs);
+    } catch (err) {
+        console.error('[Abyss] Error fetching POIs:', err);
+        res.status(500).json({ error: 'Failed to fetch POI data' });
+    }
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });

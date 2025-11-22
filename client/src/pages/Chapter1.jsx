@@ -89,7 +89,10 @@ const Chapter1 = () => {
       <Fish top="25.4%" left="8%" speed={1000} scroll={smoothScroll} />
       <Fish top="26%" left="6%" speed={1000} scroll={smoothScroll} />
 
-      <button className="play-button" onClick={() => navigate('/Chapter2')}>Venture the Abyss</button>
+      <div className="chapter-buttons">
+        <button className="play-button" onClick={() => navigate('/Chapter2')}>Venture the Abyss</button>
+        <button className="play-button" onClick={() => navigate('/Chapter3')}>Explore Coral Reefs</button>
+      </div>
     </motion.div>
   );
 };
