@@ -2,6 +2,7 @@ import React, { useRef } from "react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import "./Chapter1.css"; // Import the new CSS file
 import SubmarineIMG from "../assets/submarine-clipart-xl.png";
+import { useNavigate } from 'react-router-dom';
 
 import Wave from "../components/Wave.jsx";
 import StoryBlock from "../components/StoryBlock.jsx";
@@ -9,6 +10,7 @@ import Bubble from "../components/Bubble.jsx";
 import Fish from "../components/Fish.jsx";
 
 const Chapter1 = () => {
+  const navigate = useNavigate();
   const containerRef = useRef(null);
 
   const { scrollYProgress } = useScroll({
@@ -85,6 +87,8 @@ const Chapter1 = () => {
       <Fish top="25%" left="5%" speed={1000} scroll={smoothScroll} />
       <Fish top="25.4%" left="8%" speed={1000} scroll={smoothScroll} />
       <Fish top="26%" left="6%" speed={1000} scroll={smoothScroll} />
+
+      <button className="play-button" onClick={() => navigate('/Chapter2')}>Venture the Abyss</button>
     </motion.div>
   );
 };

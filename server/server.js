@@ -18,7 +18,7 @@ const ABYSS_CONFIG = {
     DATA_DIR: path.join(__dirname, 'data')
 };
 
-let WORLD_GRID = [];
+let grid = [];
 
 // Creates a blank grid to superpose other things on.
 const createEmptyGrid = () => {
@@ -55,7 +55,6 @@ const parseCSV = (filename) => {
             .on('end', () => resolve(results))
             .on('error', (err) => {
                 console.error(`[Abyss] Error reading ${filename}:`, err);
-                // Resolve empty on error to keep server alive
                 resolve([]); 
             });
     });
@@ -64,10 +63,10 @@ const parseCSV = (filename) => {
 // Main Loader: Merges all CSV data into the Grid
 async function initializeAbyssWorld() {
     console.log("🌊 [Abyss] Booting Submersible Systems...");
-    WORLD_GRID = createEmptyGrid();
+    grid = createEmptyGrid();
 
     try {
-        // Load all data files in parallel
+        // Load all data files superposed on top of each other. This is seen in the Chapter 2 game.
         const [cells, hazards, pois, life, resources] = await Promise.all([
             parseCSV('cells.csv'),
             parseCSV('hazards.csv'),
@@ -76,61 +75,60 @@ async function initializeAbyssWorld() {
             parseCSV('resources.csv')
         ]);
 
-        // 1. Map Base Cell Data (Depth, Biome)
+        // Maps base cells.csv file.
         cells.forEach(c => {
             const r = parseInt(c.row);
             const col = parseInt(c.col);
-            if (WORLD_GRID[r]?.[col]) {
-                WORLD_GRID[r][col].depth = parseFloat(c.depth_m);
-                WORLD_GRID[r][col].biome = c.biome;
-                WORLD_GRID[r][col].pressure = parseFloat(c.pressure_atm);
+            if (grid[r]?.[col]) {
+                grid[r][col].depth = parseFloat(c.depth_m);
+                grid[r][col].biome = c.biome;
+                grid[r][col].pressure = parseFloat(c.pressure_atm);
             }
         });
 
-        // 2. Map Hazards
+        // Maps the hazards.csv file.
         hazards.forEach(h => {
             const r = parseInt(h.row), c = parseInt(h.col);
-            if (WORLD_GRID[r]?.[c]) {
-                WORLD_GRID[r][c].hazard = { type: h.type, severity: h.severity, notes: h.notes };
+            if (grid[r]?.[c]) {
+                grid[r][c].hazard = { type: h.type, severity: h.severity, notes: h.notes };
             }
         });
 
-        // 3. Map POIs (Wrecks)
+        // Maps the Points of Interests.
         pois.forEach(p => {
             const r = parseInt(p.row), c = parseInt(p.col);
-            if (WORLD_GRID[r]?.[c]) {
-                WORLD_GRID[r][c].poi = { id: p.id, label: p.label, desc: p.description };
+            if (grid[r]?.[c]) {
+                grid[r][c].poi = { id: p.id, label: p.label, desc: p.description };
             }
         });
 
-        // 4. Map Life
+        // Maps any living entities.
         life.forEach(l => {
             const r = parseInt(l.row), c = parseInt(l.col);
-            if (WORLD_GRID[r]?.[c]) {
-                WORLD_GRID[r][c].life = { species: l.species, threat: parseInt(l.threat_level) };
+            if (grid[r]?.[c]) {
+                grid[r][c].life = { species: l.species, threat: parseInt(l.threat_level) };
             }
         });
 
-        // 5. Map Resources
+        // Maps any resources.
         resources.forEach(res => {
             const r = parseInt(res.row), c = parseInt(res.col);
-            if (WORLD_GRID[r]?.[c]) {
-                WORLD_GRID[r][c].resource = { type: res.type, value: res.economic_value };
+            if (grid[r]?.[c]) {
+                grid[r][c].resource = { type: res.type, value: res.economic_value };
             }
         });
 
-        console.log("✅ [Abyss] World Generation Complete.");
+        console.log("[Abyss] World Generation Complete.");
     } catch (err) {
-        console.error("❌ [Abyss] Initialization Failed:", err);
+        console.error("[Abyss] Initialization Failed:", err);
     }
 }
 
-// --- 3. API ROUTES ---
 
-// Game State Endpoint
+// API uses the GET Header to fetch all csv contents and displays in Chapter 2.
 app.get('/api/gamestate', (req, res) => {
     res.json({
-        grid: WORLD_GRID,
+        grid: grid,
         metadata: {
             rows: ABYSS_CONFIG.GRID_SIZE,
             cols: ABYSS_CONFIG.GRID_SIZE
@@ -143,8 +141,6 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
 });
 
-
-// --- 4. SERVER STARTUP ---
 // We wait for the game world to initialize before opening the port
 initializeAbyssWorld().then(() => {
     app.listen(PORT, () => {
