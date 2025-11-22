@@ -7,15 +7,7 @@ export default defineConfig({
     react({
       babel: {
         plugins: [['babel-plugin-react-compiler']],
-          server: {
-          proxy: {
-            '/api': {
-              target: 'http://localhost:3000', // your Express server
-              changeOrigin: true,
-              secure: false,
-            },
-          },
-        },
+
       },
     }),
   ],
