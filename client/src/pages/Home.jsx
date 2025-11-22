@@ -2,7 +2,7 @@ import React from 'react';
 import AbyssGame from '../AbyssGame';
 import './Home.css';
 import { useNavigate } from 'react-router-dom';
-import submarineImg from '../assets/submarine-clipart-xl.png';
+import SubmarineIMG from "../assets/submarine-clipart-xl.png";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const Home = () => {
       <h1 className="title">Deep Sea Exploration</h1>
 
       {/* Submarine Image */}
-      <img src={submarineImg} alt="submarine" className="submarine" />
+      <img src={SubmarineIMG} alt="submarine" className="submarine" />
 
       {/* Play Button ~ taking player to Chapter1 of the game*/}
       <button className="play-button" onClick={() => navigate('/Chapter1')}>Play Now</button>
