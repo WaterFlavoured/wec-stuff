@@ -434,22 +434,23 @@ export default function AbyssGame() {
           gameState.current.mineralValue = newMineralValue;
           setMineralValue(newMineralValue);
           
-          // Store resource info before removing it
-          collectedResourceInfo = cell.resource;
-          
           // Remove the resource from the cell
           cell.resource = null;
+          
+          // Clear scan result after collection
+          setScanResult(null);
 
           if (newMineralValue >= 1000000) {
             setGameStatus('success');
             gameState.current.gameStatus = 'success';
             setIsPanic(false);
             gameState.current.shakeStrength = 0;
+            return;
           }
         }
       }
 
-      // Scan Results
+      // Scan Results (only show if not collected)
       if (cell.poi || cell.life || cell.resource) {
         setScanResult({ poi: cell.poi, life: cell.life, resource: cell.resource });
       } else {
