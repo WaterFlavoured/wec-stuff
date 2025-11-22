@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import './AbyssGame.css';
 
 // --- MOCK DATA FALLBACKS ---
 const RAW_HAZARDS = [
@@ -290,50 +291,45 @@ export default function AbyssGame() {
   };
 
   if (loading) return (
-    <div className="h-screen w-full bg-black flex items-center justify-center text-green-500 font-mono">
+    <div className="loading-screen">
         INITIALIZING ABYSSAL INTERFACE...
     </div>
   );
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden cursor-none font-mono text-[#00ff9d]">
-      <style>{`
-        @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .animate-flash { animation: flash 0.2s infinite; }
-      `}</style>
-
+    <div className="abyss-game-container">
       <canvas
         ref={canvasRef}
         onMouseMove={handleMouseMove}
-        className="absolute top-0 left-0 block w-full h-full"
+        className="abyss-game-canvas"
       />
 
       {/* HUD */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-5 flex justify-between z-10">
-        <div className="bg-[#00140acc] border border-[#004d33] p-4 rounded backdrop-blur-sm w-72 h-fit">
-          <h2 className="text-white border-b border-[#00ff9d] pb-1 mb-2 text-sm tracking-widest uppercase flex justify-between">
+      <div className="hud-container">
+        <div className="hud-panel">
+          <h2 className="panel-header">
             <span>Status</span>
-            <span className={connectionMode === 'ONLINE' ? "text-green-400" : "text-yellow-600"}>[{connectionMode}]</span>
+            <span className={connectionMode === 'ONLINE' ? "connection-status online" : "connection-status offline"}>[{connectionMode}]</span>
           </h2>
-          <div className="space-y-1 text-xs">
-             <div className="flex justify-between"><span>DEPTH:</span> <span className="text-white font-bold">{status.depth}</span></div>
-             <div className="flex justify-between"><span>PRESSURE:</span> <span className="text-white font-bold">{status.pressure}</span></div>
-             <div className="flex justify-between"><span>COORDS:</span> <span className="text-white font-bold">{status.coords}</span></div>
+          <div className="status-list">
+             <div className="status-item"><span>DEPTH:</span> <span className="status-value">{status.depth}</span></div>
+             <div className="status-item"><span>PRESSURE:</span> <span className="status-value">{status.pressure}</span></div>
+             <div className="status-item"><span>COORDS:</span> <span className="status-value">{status.coords}</span></div>
           </div>
         </div>
 
-        <div className={`bg-[#00140acc] border border-[#004d33] p-4 rounded backdrop-blur-sm w-72 h-fit transition-all duration-300 ${scanResult ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-5'}`}>
-          <h2 className="text-white border-b border-[#00ff9d] pb-1 mb-2 text-sm tracking-widest uppercase">Scan Results</h2>
-          <div className="space-y-3 text-sm">
-            {scanResult?.poi && <div><div className="text-yellow-300 font-bold">Target: {scanResult.poi.label}</div><div className="text-xs text-gray-300">{scanResult.poi.desc}</div></div>}
-            {scanResult?.life && <div><div className="text-[#00ff9d] font-bold">Bio-sign: {scanResult.life.species}</div><div className="text-xs text-gray-300">Threat: {scanResult.life.threat}</div></div>}
-            {scanResult?.resource && <div><div className="text-gray-400 font-bold">Mineral: {scanResult.resource.type}</div><div className="text-xs text-gray-500">Value: ${scanResult.resource.value}</div></div>}
+        <div className={`hud-panel scan-panel ${scanResult ? 'visible' : 'hidden'}`}>
+          <h2 className="panel-header">Scan Results</h2>
+          <div className="scan-results">
+            {scanResult?.poi && <div><div className="scan-item-poi">Target: {scanResult.poi.label}</div><div className="scan-item-desc">{scanResult.poi.desc}</div></div>}
+            {scanResult?.life && <div><div className="scan-item-life">Bio-sign: {scanResult.life.species}</div><div className="scan-item-desc">Threat: {scanResult.life.threat}</div></div>}
+            {scanResult?.resource && <div><div className="scan-item-resource">Mineral: {scanResult.resource.type}</div><div className="scan-item-detail">Value: ${scanResult.resource.value}</div></div>}
           </div>
         </div>
       </div>
 
       {isPanic && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 border-red-600 bg-red-900/90 text-red-500 px-10 py-6 text-4xl font-bold uppercase animate-flash pointer-events-none z-50 text-center">
+        <div className="warning-overlay">
           WARNING: {warningMsg}
         </div>
       )}
