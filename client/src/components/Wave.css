@@ -1,0 +1,8 @@
+.wave-width {
+    width: 100%;
+}
+
+.wave-path {
+    fill: none;
+    stroke-width: 6;
+}
