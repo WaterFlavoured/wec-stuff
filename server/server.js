@@ -50,8 +50,11 @@ const parseCSV = (filename) => {
         }
 
         fs.createReadStream(filePath)
+            // Takes all data, and creates streams, reading 1 row at a time.
             .pipe(csv())
+            // Each row gets pushed into the results arraay.
             .on('data', (data) => results.push(data))
+            // At the end once all data was pushed, it resolves all the rows.
             .on('end', () => resolve(results))
             .on('error', (err) => {
                 console.error(`[Abyss] Error reading ${filename}:`, err);
@@ -63,6 +66,7 @@ const parseCSV = (filename) => {
 // Main Loader: Merges all CSV data into the Grid
 async function initializeAbyssWorld() {
     console.log("🌊 [Abyss] Booting Submersible Systems...");
+    // Initialize empty grid for frontend to utilize.
     grid = createEmptyGrid();
 
     try {
