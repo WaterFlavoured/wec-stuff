@@ -1,15 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './AbyssGame.css';
+import './Chapter3.css';
 
 // Import image assets
-import hazardIcon from './assets/hazard.png';
-import poiIcon from './assets/poi.png';
-import lifeIcon from './assets/life.png';
-import resourceIcon from './assets/resource.png';
-import submarineIcon from './assets/submarine-clipart-xl.png';
+import hazardIcon from '../assets/hazard.png';
+import poiIcon from '../assets/poi.png';
+import coralIcon from '../assets/coral.png';
+import submarineIcon from '../assets/submarine-clipart-xl.png';
 
-// --- MOCK DATA FALLBACKS ---
 const RAW_HAZARDS = [
   { r: 26, c: 11, type: "thermal_vent", label: "Active Chimney" },
   { r: 42, c: 44, type: "acidic_zone", label: "Low pH Mass" },
@@ -25,17 +23,10 @@ const RAW_POI = [
   { r: 5, c: 7, id: "WRECK_005", label: "Sunken Freighter", desc: "Deep resting state." }
 ];
 
-const RAW_LIFE = [
-  { r: 22, c: 45, species: "Abyssal_Ray", threat: 2 },
-  { r: 44, c: 38, species: "Abyssal_Ray", threat: 2 },
-  { r: 47, c: 31, species: "Abyssal_Plant", threat: 0 },
-  { r: 25, c: 29, species: "Giant_Isopod", threat: 1 }
-];
-
 const rand = (min, max) => Math.random() * (max - min) + min;
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-export default function AbyssGame() {
+export default function Chapter3() {
   const canvasRef = useRef(null);
   const navigate = useNavigate();
   
@@ -47,7 +38,7 @@ export default function AbyssGame() {
   const [isPanic, setIsPanic] = useState(false);
   const [warningMsg, setWarningMsg] = useState('');
   const [health, setHealth] = useState(100);
-  const [mineralValue, setMineralValue] = useState(0);
+  const [coralSamples, setCoralSamples] = useState(0);
   const [gameStatus, setGameStatus] = useState('playing');
 
   // Mutable Game State
@@ -62,20 +53,19 @@ export default function AbyssGame() {
     shakeStrength: 0,
     activeCell: null,
     health: 100,
-    mineralValue: 0,
+    coralSamples: 0,
     gameStatus: 'playing',
     visitedHazards: new Set(),
-    collectedResources: new Set(),
+    collectedCorals: new Set(),
     images: {
       hazard: null,
       poi: null,
-      life: null,
-      resource: null,
+      coral: null,
       submarine: null
     }
   });
 
-  // --- 1. PRELOAD IMAGES ---
+  // Preload images
   useEffect(() => {
     const loadImage = (src) => {
       return new Promise((resolve, reject) => {
@@ -89,30 +79,100 @@ export default function AbyssGame() {
     Promise.all([
       loadImage(hazardIcon),
       loadImage(poiIcon),
-      loadImage(lifeIcon),
-      loadImage(resourceIcon),
+      loadImage(coralIcon),
       loadImage(submarineIcon)
-    ]).then(([hazard, poi, life, resource, submarine]) => {
-      gameState.current.images = { hazard, poi, life, resource, submarine };
+    ]).then(([hazard, poi, coral, submarine]) => {
+      gameState.current.images = { hazard, poi, coral, submarine };
     }).catch(err => {
       console.warn("Failed to load images:", err);
     });
   }, []);
 
-  // --- 2. INITIALIZATION ---
+  // Initialize grid data
   useEffect(() => {
     const initGridData = async () => {
       try {
-        // Fetch from Express Server
-        const response = await fetch('http://localhost:3000/api/gamestate', {
-            signal: AbortSignal.timeout(3000)
+        // Try to fetch coral data from server
+        const coralResponse = await fetch('http://localhost:3000/api/corals', {
+          signal: AbortSignal.timeout(3000)
         });
         
-        if (!response.ok) throw new Error('Server error');
+        const hazardsResponse = await fetch('http://localhost:3000/api/hazards', {
+          signal: AbortSignal.timeout(3000)
+        });
         
-        const data = await response.json();
-        gameState.current.grid = data.grid;
-        gameState.current.gridSize = data.metadata.rows;
+        const poiResponse = await fetch('http://localhost:3000/api/poi', {
+          signal: AbortSignal.timeout(3000)
+        });
+        
+        if (!coralResponse.ok || !hazardsResponse.ok || !poiResponse.ok) {
+          throw new Error('Server error');
+        }
+        
+        const coralData = await coralResponse.json();
+        const hazardsData = await hazardsResponse.json();
+        const poiData = await poiResponse.json();
+        
+        // Build grid with coral data
+        const grid = [];
+        const GRID_SIZE = 50;
+        
+        for (let r = 0; r < GRID_SIZE; r++) {
+          grid[r] = [];
+          for (let c = 0; c < GRID_SIZE; c++) {
+            grid[r][c] = {
+              row: r, col: c,
+              depth: rand(10, 100),
+              pressure: rand(1, 10),
+              biome: "plain",
+              hazard: null, 
+              poi: null, 
+              coral: null
+            };
+          }
+        }
+        
+        // Add corals from server data
+        coralData.forEach(coral => {
+          const r = coral.row;
+          const c = coral.col;
+          if (grid[r]?.[c]) {
+            grid[r][c].coral = {
+              cover: coral.coral_cover_pct,
+              health: coral.health_index,
+              bleaching: coral.bleaching_risk,
+              biodiversity: coral.biodiversity_index
+            };
+            grid[r][c].biome = "coral";
+          }
+        });
+        
+        // Add hazards
+        hazardsData.forEach(h => {
+          if (grid[h.row]?.[h.col]) {
+            grid[h.row][h.col].hazard = {
+              type: h.type,
+              severity: h.severity,
+              label: h.notes
+            };
+          }
+        });
+        
+        // Add POIs
+        poiData.forEach(p => {
+          if (grid[p.row]?.[p.col]) {
+            grid[p.row][p.col].poi = {
+              id: p.id,
+              category: p.category,
+              label: p.label,
+              desc: p.description,
+              value: p.research_value
+            };
+          }
+        });
+        
+        gameState.current.grid = grid;
+        gameState.current.gridSize = GRID_SIZE;
         setConnectionMode('ONLINE');
         setLoading(false);
         
@@ -122,29 +182,51 @@ export default function AbyssGame() {
         // Fallback Grid Generation
         const grid = [];
         const GRID_SIZE = 50;
+        
         for (let r = 0; r < GRID_SIZE; r++) {
           grid[r] = [];
           for (let c = 0; c < GRID_SIZE; c++) {
             grid[r][c] = {
               row: r, col: c,
-              depth: rand(4000, 6000),
-              pressure: rand(400, 600),
+              depth: rand(10, 100),
+              pressure: rand(1, 10),
               biome: "plain",
-              hazard: null, poi: null, life: null, resource: null
+              hazard: null, poi: null, coral: null
             };
-            if (Math.random() < 0.1) grid[r][c].biome = "slope";
-            if (Math.random() < 0.05) grid[r][c].resource = { type: "Manganese_Nodule", value: randInt(20000, 50000) };
+            
+            // Add some random corals
+            if (Math.random() < 0.15) {
+              const healthIndex = Math.random();
+              grid[r][c].coral = {
+                cover: randInt(50, 100),
+                health: healthIndex,
+                bleaching: 1 - healthIndex,
+                biodiversity: Math.random()
+              };
+              grid[r][c].biome = "coral";
+            }
           }
         }
+        
         // Inject Mock Data
-        RAW_HAZARDS.forEach(h => { if (grid[h.r]?.[h.c]) grid[h.r][h.c].hazard = h; });
-        RAW_POI.forEach(p => { if (grid[p.r]?.[p.c]) grid[p.r][p.c].poi = p; });
-        RAW_LIFE.forEach(l => { if (grid[l.r]?.[l.c]) grid[l.r][l.c].life = l; });
+        RAW_HAZARDS.forEach(h => { 
+          if (grid[h.r]?.[h.c]) {
+            grid[h.r][h.c].hazard = { type: h.type, label: h.label };
+          }
+        });
+        
+        RAW_POI.forEach(p => { 
+          if (grid[p.r]?.[p.c]) {
+            grid[p.r][p.c].poi = p;
+          }
+        });
         
         // Add procedural hazards
-        for (let i = 0; i < 40; i++) {
-            let r = randInt(0, 49), c = randInt(0, 49);
+        for (let i = 0; i < 20; i++) {
+          let r = randInt(0, 49), c = randInt(0, 49);
+          if (grid[r][c]) {
             grid[r][c].hazard = { type: "thermal_vent", label: "Unknown Thermal Spike" };
+          }
         }
 
         gameState.current.grid = grid;
@@ -157,7 +239,7 @@ export default function AbyssGame() {
     initGridData();
   }, []);
 
-  // --- 3. RENDER LOOP ---
+  // Render loop
   useEffect(() => {
     if (loading) return;
     const canvas = canvasRef.current;
@@ -179,12 +261,12 @@ export default function AbyssGame() {
       const { grid, mouse, shakeStrength, gridSize, cellSize } = gameState.current;
       
       // Clear
-      ctx.fillStyle = '#050505';
+      ctx.fillStyle = '#0a1628';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (!grid || grid.length === 0) { 
-          animationFrameId = requestAnimationFrame(render);
-          return; 
+        animationFrameId = requestAnimationFrame(render);
+        return; 
       }
 
       // Auto-pan camera to follow mouse at screen edges
@@ -223,7 +305,7 @@ export default function AbyssGame() {
       const startX = camera.x + shakeX;
       const startY = camera.y + shakeY;
 
-      // Draw Entire Grid
+      // Draw Grid
       ctx.save();
       ctx.translate(startX, startY);
 
@@ -236,10 +318,20 @@ export default function AbyssGame() {
           const x = c * cellSize;
           const y = r * cellSize;
 
-          // Biome
-          ctx.fillStyle = '#001a11';
-          if (cell.biome === 'slope') ctx.fillStyle = '#00261a';
+          // Biome colors
+          ctx.fillStyle = '#0d2840'; // Default ocean floor
+          if (cell.biome === 'coral' && cell.coral) {
+            // Color based on coral health
+            if (cell.coral.health > 0.9) {
+              ctx.fillStyle = '#1a4d2e'; // Healthy green
+            } else if (cell.coral.health > 0.7) {
+              ctx.fillStyle = '#4d4d1a'; // Moderate yellow-green
+            } else {
+              ctx.fillStyle = '#4d1a1a'; // Unhealthy red
+            }
+          }
           if (cell.hazard) ctx.fillStyle = '#1a0a0a'; 
+          
           ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
 
           // Icons
@@ -248,20 +340,21 @@ export default function AbyssGame() {
           const iconSize = 24;
           const { images } = gameState.current;
 
+          // Draw coral icon
+          if (cell.coral && !cell.hazard && images.coral) {
+            ctx.drawImage(images.coral, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
+          }
+
           if (cell.hazard && images.hazard) {
             ctx.drawImage(images.hazard, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
           } else if (cell.poi && images.poi) {
             ctx.drawImage(images.poi, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
-          } else if (cell.life && images.life) {
-            ctx.drawImage(images.life, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
-          } else if (cell.resource && images.resource) {
-            ctx.drawImage(images.resource, cx - iconSize/2, cy - iconSize/2, iconSize, iconSize);
           }
 
-          // Debug Text
+          // Debug text
           ctx.fillStyle = "rgba(0, 255, 157, 0.1)";
           ctx.font = "8px monospace";
-          ctx.fillText(`${r},${c}`, cx, y + cellSize - 5);
+          ctx.fillText(`${r},${c}`, cx - 10, y + cellSize - 5);
         }
       }
       ctx.restore();
@@ -275,12 +368,12 @@ export default function AbyssGame() {
         ctx.restore();
       }
 
-      // Flashlight Mask
+      // Flashlight effect
       ctx.save();
       ctx.globalCompositeOperation = 'destination-in';
-      const flashlight = ctx.createRadialGradient(mouse.x, mouse.y, 10, mouse.x, mouse.y, 180);
+      const flashlight = ctx.createRadialGradient(mouse.x, mouse.y, 10, mouse.x, mouse.y, 200);
       flashlight.addColorStop(0, 'rgba(0, 0, 0, 1)');
-      flashlight.addColorStop(0.8, 'rgba(0, 0, 0, 0.5)');
+      flashlight.addColorStop(0.7, 'rgba(0, 0, 0, 0.6)');
       flashlight.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = flashlight;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -296,7 +389,6 @@ export default function AbyssGame() {
         ctx.fillStyle = panicGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Glitch
         ctx.fillStyle = `rgba(255, 0, 0, ${Math.random() * 0.2})`;
         ctx.fillRect(0, Math.random() * canvas.height, canvas.width, 2);
         ctx.restore();
@@ -313,7 +405,7 @@ export default function AbyssGame() {
     };
   }, [loading]);
 
-  // --- 4. MOUSE HANDLER ---
+  // Mouse handlers
   const handleMouseDown = (e) => {
     gameState.current.isDragging = true;
     gameState.current.lastMouse = { x: e.clientX, y: e.clientY };
@@ -332,7 +424,7 @@ export default function AbyssGame() {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Handle dragging for camera movement
+    // Handle dragging
     if (gameState.current.isDragging) {
       const deltaX = e.clientX - gameState.current.lastMouse.x;
       const deltaY = e.clientY - gameState.current.lastMouse.y;
@@ -340,7 +432,6 @@ export default function AbyssGame() {
       gameState.current.camera.x += deltaX;
       gameState.current.camera.y += deltaY;
       
-      // Clamp camera to grid bounds
       const { gridSize, cellSize } = gameState.current;
       const gridSizePx = gridSize * cellSize;
       const maxX = 0;
@@ -358,7 +449,6 @@ export default function AbyssGame() {
     gameState.current.mouse = { x: mouseX, y: mouseY };
 
     const { gridSize, cellSize, camera } = gameState.current;
-
     const col = Math.floor((mouseX - camera.x) / cellSize);
     const row = Math.floor((mouseY - camera.y) / cellSize);
 
@@ -385,6 +475,7 @@ export default function AbyssGame() {
         coords: `${row}, ${col}`
       });
 
+      // Handle hazards
       if (cell.hazard) {
         setIsPanic(true);
         setWarningMsg(cell.hazard.type ? cell.hazard.type.replace('_', ' ') : "DANGER");
@@ -410,22 +501,21 @@ export default function AbyssGame() {
         gameState.current.shakeStrength = 0;
       }
 
-      let collectedResourceInfo = null;
-      if (cell.resource) {
-        const resourceKey = `${row},${col}`;
-        if (!gameState.current.collectedResources.has(resourceKey)) {
-          gameState.current.collectedResources.add(resourceKey);
-          const newMineralValue = gameState.current.mineralValue + Number(cell.resource.value);
-          gameState.current.mineralValue = newMineralValue;
-          setMineralValue(newMineralValue);
+      // Handle coral collection
+      let collectedCoralInfo = null;
+      if (cell.coral) {
+        const coralKey = `${row},${col}`;
+        if (!gameState.current.collectedCorals.has(coralKey)) {
+          gameState.current.collectedCorals.add(coralKey);
+          const newCoralCount = gameState.current.coralSamples + 1;
+          gameState.current.coralSamples = newCoralCount;
+          setCoralSamples(newCoralCount);
           
-          // Store resource info before removing it
-          collectedResourceInfo = cell.resource;
-          
-          // Remove the resource from the cell
-          cell.resource = null;
+          collectedCoralInfo = cell.coral;
+          cell.coral = null; // Remove coral after collection
+          cell.biome = "plain";
 
-          if (newMineralValue >= 1000000) {
+          if (newCoralCount >= 30) {
             setGameStatus('success');
             gameState.current.gameStatus = 'success';
             setIsPanic(false);
@@ -434,8 +524,12 @@ export default function AbyssGame() {
         }
       }
 
-      if (cell.poi || cell.life || cell.resource || collectedResourceInfo) {
-        setScanResult({ poi: cell.poi, life: cell.life, resource: cell.resource || collectedResourceInfo });
+      // Show scan results
+      if (cell.poi || cell.coral || collectedCoralInfo) {
+        setScanResult({ 
+          poi: cell.poi, 
+          coral: cell.coral || collectedCoralInfo 
+        });
       } else {
         setScanResult(null);
       }
@@ -444,36 +538,39 @@ export default function AbyssGame() {
 
   const resetRun = () => {
     gameState.current.health = 100;
-    gameState.current.mineralValue = 0;
+    gameState.current.coralSamples = 0;
     gameState.current.gameStatus = 'playing';
     gameState.current.visitedHazards.clear();
-    gameState.current.collectedResources.clear();
+    gameState.current.collectedCorals.clear();
     gameState.current.activeCell = null;
     gameState.current.shakeStrength = 0;
     setHealth(100);
-    setMineralValue(0);
+    setCoralSamples(0);
     setGameStatus('playing');
     setIsPanic(false);
     setWarningMsg('');
     setScanResult(null);
     setStatus({ depth: '--', pressure: '--', coords: '--' });
+    
+    // Reload the page to reset the grid
+    window.location.reload();
   };
 
   if (loading) return (
     <div className="loading-screen">
-        INITIALIZING ABYSSAL INTERFACE...
+      INITIALIZING CORAL REEF SCANNER...
     </div>
   );
 
   return (
-    <div className="abyss-game-container" style={{ cursor: gameStatus !== 'playing' ? 'default' : 'none' }}>
+    <div className="chapter3-container" style={{ cursor: gameStatus !== 'playing' ? 'default' : 'none' }}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onMouseMove={handleMouseMove}
-        className="abyss-game-canvas"
+        className="chapter3-canvas"
       />
 
       {/* HUD */}
@@ -481,7 +578,10 @@ export default function AbyssGame() {
         <div className="health-bar-container">
           <div className="health-bar-label">HULL INTEGRITY</div>
           <div className="health-bar-outer">
-            <div className="health-bar-inner" style={{ width: `${health}%`, backgroundColor: health > 60 ? '#00ff9d' : health > 30 ? '#ffaa00' : '#ff0000' }}></div>
+            <div className="health-bar-inner" style={{ 
+              width: `${health}%`, 
+              backgroundColor: health > 60 ? '#00ff9d' : health > 30 ? '#ffaa00' : '#ff0000' 
+            }}></div>
           </div>
           <div className="health-bar-text">{health}%</div>
         </div>
@@ -490,22 +590,51 @@ export default function AbyssGame() {
           <div className="hud-panel">
             <h2 className="panel-header">
               <span>Status</span>
-              <span className={connectionMode === 'ONLINE' ? "connection-status online" : "connection-status offline"}>[{connectionMode}]</span>
+              <span className={connectionMode === 'ONLINE' ? "connection-status online" : "connection-status offline"}>
+                [{connectionMode}]
+              </span>
             </h2>
             <div className="status-list">
-               <div className="status-item"><span>DEPTH:</span> <span className="status-value">{status.depth}</span></div>
-               <div className="status-item"><span>PRESSURE:</span> <span className="status-value">{status.pressure}</span></div>
-               <div className="status-item"><span>COORDS:</span> <span className="status-value">{status.coords}</span></div>
-               <div className="status-item"><span>MINERALS:</span> <span className="status-value">${mineralValue.toLocaleString()}/1M</span></div>
+              <div className="status-item">
+                <span>DEPTH:</span> 
+                <span className="status-value">{status.depth}</span>
+              </div>
+              <div className="status-item">
+                <span>PRESSURE:</span> 
+                <span className="status-value">{status.pressure}</span>
+              </div>
+              <div className="status-item">
+                <span>COORDS:</span> 
+                <span className="status-value">{status.coords}</span>
+              </div>
+              <div className="status-item">
+                <span>SAMPLES:</span> 
+                <span className="status-value">{coralSamples}/30</span>
+              </div>
             </div>
           </div>
 
           <div className={`hud-panel scan-panel ${scanResult ? 'visible' : 'hidden'}`}>
             <h2 className="panel-header">Scan Results</h2>
             <div className="scan-results">
-              {scanResult?.poi && <div><div className="scan-item-poi">Target: {scanResult.poi.label}</div><div className="scan-item-desc">{scanResult.poi.desc}</div></div>}
-              {scanResult?.life && <div><div className="scan-item-life">Bio-sign: {scanResult.life.species.replace(/_/g, ' ')}</div><div className="scan-item-desc">Threat: {scanResult.life.threat}</div></div>}
-              {scanResult?.resource && <div><div className="scan-item-resource">Mineral: {scanResult.resource.type.replace(/_/g, ' ')}</div><div className="scan-item-detail">Value: ${scanResult.resource.value}</div></div>}
+              {scanResult?.poi && (
+                <div>
+                  <div className="scan-item-poi">POI: {scanResult.poi.label}</div>
+                  <div className="scan-item-desc">{scanResult.poi.desc}</div>
+                  {scanResult.poi.value && (
+                    <div className="scan-item-detail">Research Value: {scanResult.poi.value}</div>
+                  )}
+                </div>
+              )}
+              {scanResult?.coral && (
+                <div>
+                  <div className="scan-item-coral">Coral Sample Collected!</div>
+                  <div className="scan-item-detail">Coverage: {scanResult.coral.cover}%</div>
+                  <div className="scan-item-detail">Health: {(scanResult.coral.health * 100).toFixed(1)}%</div>
+                  <div className="scan-item-detail">Bleaching Risk: {(scanResult.coral.bleaching * 100).toFixed(1)}%</div>
+                  <div className="scan-item-detail">Biodiversity: {(scanResult.coral.biodiversity * 100).toFixed(1)}%</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -521,15 +650,20 @@ export default function AbyssGame() {
         <div className="end-overlay">
           <div className="end-card">
             <div className="end-title">
-              {gameStatus === 'dead' ? 'VESSEL CRUSHED' : 'HARVEST COMPLETE'}
+              {gameStatus === 'dead' ? 'MISSION FAILED' : 'RESEARCH COMPLETE'}
             </div>
             <div className="end-metrics">
               <div>Final hull integrity: {health}%</div>
-              <div>Mineral value collected: ${mineralValue.toLocaleString()}</div>
+              <div>Coral samples collected: {coralSamples}</div>
+              {gameStatus === 'success' && (
+                <div className="success-message">
+                  Excellent work! Your coral samples will help scientists understand reef health and biodiversity.
+                </div>
+              )}
             </div>
             <div className="end-actions">
               <button className="end-button" onClick={resetRun}>
-                {gameStatus === 'dead' ? 'Retry Dive' : 'Dive Again'}
+                {gameStatus === 'dead' ? 'Retry Mission' : 'Explore Again'}
               </button>
               <button className="end-button secondary" onClick={() => navigate('/chapter1')}>
                 Back to Chapter 1
