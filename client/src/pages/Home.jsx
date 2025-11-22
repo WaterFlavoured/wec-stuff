@@ -1,4 +1,5 @@
 import React from 'react';
+import AbyssGame from '../AbyssGame';
 import './Home.css';
 import { useNavigate } from 'react-router-dom';
 import submarineImg from '../assets/submarine-clipart-xl.png';
