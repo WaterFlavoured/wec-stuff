@@ -460,7 +460,7 @@ export default function AbyssGame() {
   );
 
   return (
-    <div className="abyss-game-container">
+    <div className="abyss-game-container" style={{ cursor: gameStatus !== 'playing' ? 'default' : 'none' }}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
