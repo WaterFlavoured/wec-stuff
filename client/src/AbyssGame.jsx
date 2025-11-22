@@ -6,6 +6,7 @@ import hazardIcon from './assets/hazard.png';
 import poiIcon from './assets/poi.png';
 import lifeIcon from './assets/life.png';
 import resourceIcon from './assets/resource.png';
+import submarineIcon from './assets/submarine-clipart-xl.png';
 
 // --- MOCK DATA FALLBACKS ---
 const RAW_HAZARDS = [
@@ -50,13 +51,17 @@ export default function AbyssGame() {
     gridSize: 50,
     cellSize: 40,
     mouse: { x: -1000, y: -1000 },
+    camera: { x: 0, y: 0 },
+    isDragging: false,
+    lastMouse: { x: 0, y: 0 },
     shakeStrength: 0,
     activeCell: null,
     images: {
       hazard: null,
       poi: null,
       life: null,
-      resource: null
+      resource: null,
+      submarine: null
     }
   });
 
@@ -75,9 +80,10 @@ export default function AbyssGame() {
       loadImage(hazardIcon),
       loadImage(poiIcon),
       loadImage(lifeIcon),
-      loadImage(resourceIcon)
-    ]).then(([hazard, poi, life, resource]) => {
-      gameState.current.images = { hazard, poi, life, resource };
+      loadImage(resourceIcon),
+      loadImage(submarineIcon)
+    ]).then(([hazard, poi, life, resource, submarine]) => {
+      gameState.current.images = { hazard, poi, life, resource, submarine };
     }).catch(err => {
       console.warn("Failed to load images:", err);
     });
@@ -171,31 +177,49 @@ export default function AbyssGame() {
           return; 
       }
 
-      // Camera Shake
+      // Auto-pan camera to follow mouse at screen edges
+      const { camera } = gameState.current;
+      const edgeThreshold = 100;
+      const panSpeed = 5;
+      
+      if (mouse.x > canvas.width - edgeThreshold) {
+        camera.x -= panSpeed;
+      } else if (mouse.x < edgeThreshold) {
+        camera.x += panSpeed;
+      }
+      
+      if (mouse.y > canvas.height - edgeThreshold) {
+        camera.y -= panSpeed;
+      } else if (mouse.y < edgeThreshold) {
+        camera.y += panSpeed;
+      }
+      
+      // Clamp camera to grid bounds
       const gridSizePx = gridSize * cellSize;
+      const maxX = 0;
+      const minX = canvas.width - gridSizePx;
+      const maxY = 0;
+      const minY = canvas.height - gridSizePx;
+      
+      camera.x = Math.max(minX, Math.min(maxX, camera.x));
+      camera.y = Math.max(minY, Math.min(maxY, camera.y));
+
+      // Camera with shake
       let shakeX = 0, shakeY = 0;
       if (shakeStrength > 0) {
         shakeX = (Math.random() - 0.5) * 20;
         shakeY = (Math.random() - 0.5) * 20;
       }
-      const startX = (canvas.width - gridSizePx) / 2 + shakeX;
-      const startY = (canvas.height - gridSizePx) / 2 + shakeY;
+      const startX = camera.x + shakeX;
+      const startY = camera.y + shakeY;
 
-      // Draw Visible Area Only
-      const range = 6; 
-      const mCol = Math.floor((mouse.x - startX) / cellSize);
-      const mRow = Math.floor((mouse.y - startY) / cellSize);
-      const rMin = Math.max(0, mRow - range);
-      const rMax = Math.min(gridSize, mRow + range);
-      const cMin = Math.max(0, mCol - range);
-      const cMax = Math.min(gridSize, mCol + range);
-
+      // Draw Entire Grid
       ctx.save();
       ctx.translate(startX, startY);
 
-      for (let r = rMin; r < rMax; r++) {
+      for (let r = 0; r < gridSize; r++) {
         if (!grid[r]) continue;
-        for (let c = cMin; c < cMax; c++) {
+        for (let c = 0; c < gridSize; c++) {
           const cell = grid[r][c];
           if (!cell) continue;
 
@@ -231,6 +255,15 @@ export default function AbyssGame() {
         }
       }
       ctx.restore();
+
+      // Draw submarine cursor
+      const { submarine } = gameState.current.images;
+      if (submarine) {
+        ctx.save();
+        const subSize = 40;
+        ctx.drawImage(submarine, mouse.x - subSize/2, mouse.y - subSize/2, subSize, subSize);
+        ctx.restore();
+      }
 
       // Flashlight Mask
       ctx.save();
@@ -271,6 +304,15 @@ export default function AbyssGame() {
   }, [loading]);
 
   // --- 4. MOUSE HANDLER ---
+  const handleMouseDown = (e) => {
+    gameState.current.isDragging = true;
+    gameState.current.lastMouse = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseUp = () => {
+    gameState.current.isDragging = false;
+  };
+
   const handleMouseMove = (e) => {
     if (loading || !canvasRef.current) return;
 
@@ -279,15 +321,35 @@ export default function AbyssGame() {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
+    // Handle dragging for camera movement
+    if (gameState.current.isDragging) {
+      const deltaX = e.clientX - gameState.current.lastMouse.x;
+      const deltaY = e.clientY - gameState.current.lastMouse.y;
+      
+      gameState.current.camera.x += deltaX;
+      gameState.current.camera.y += deltaY;
+      
+      // Clamp camera to grid bounds
+      const { gridSize, cellSize } = gameState.current;
+      const gridSizePx = gridSize * cellSize;
+      const maxX = 0;
+      const minX = canvas.width - gridSizePx;
+      const maxY = 0;
+      const minY = canvas.height - gridSizePx;
+      
+      gameState.current.camera.x = Math.max(minX, Math.min(maxX, gameState.current.camera.x));
+      gameState.current.camera.y = Math.max(minY, Math.min(maxY, gameState.current.camera.y));
+      
+      gameState.current.lastMouse = { x: e.clientX, y: e.clientY };
+      return;
+    }
+
     gameState.current.mouse = { x: mouseX, y: mouseY };
 
-    const { gridSize, cellSize } = gameState.current;
-    const gridSizePx = gridSize * cellSize;
-    const startX = (canvas.width - gridSizePx) / 2; 
-    const startY = (canvas.height - gridSizePx) / 2;
+    const { gridSize, cellSize, camera } = gameState.current;
 
-    const col = Math.floor((mouseX - startX) / cellSize);
-    const row = Math.floor((mouseY - startY) / cellSize);
+    const col = Math.floor((mouseX - camera.x) / cellSize);
+    const row = Math.floor((mouseY - camera.y) / cellSize);
 
     if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) {
       if (gameState.current.activeCell) {
@@ -339,6 +401,9 @@ export default function AbyssGame() {
     <div className="abyss-game-container">
       <canvas
         ref={canvasRef}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
         onMouseMove={handleMouseMove}
         className="abyss-game-canvas"
       />
